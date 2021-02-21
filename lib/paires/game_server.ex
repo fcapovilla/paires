@@ -92,7 +92,7 @@ defmodule Paires.GameServer do
       end
     pairs = state.pairs |> Map.put(player, player_pairs)
     state = %{state |
-      pairs: pairs
+      pairs: pairs,
     }
     {:reply, :ok, broadcast!(state)}
   end
@@ -101,8 +101,15 @@ defmodule Paires.GameServer do
   def handle_call({:delete_pair, player, image}, _from, %{state: :choose_pairs} = state) do
     player_pairs = (state.pairs[player] || %{}) |> Map.drop([image])
     pairs = state.pairs |> Map.put(player, player_pairs)
+    ready_votes =
+      if Enum.count(player_pairs) < 5 do
+        Map.drop(state.ready_votes, [player])
+      else
+        state.ready_votes
+      end
     state = %{state |
-      pairs: pairs
+      pairs: pairs,
+      ready_votes: ready_votes,
     }
     {:reply, :ok, broadcast!(state)}
   end
