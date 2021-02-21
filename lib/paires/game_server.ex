@@ -254,8 +254,10 @@ defmodule Paires.GameServer do
         end)}
       end)
       |> Enum.map(fn {player, images} ->
-           {player, hd(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] -- images)}
+           remaining = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] -- images
+           if Enum.count(remaining) == 1, do: {player, hd(remaining)}, else: nil
          end)
+      |> Enum.reject(&(&1 == nil))
       |> Enum.into(%{})
     players_per_last_image =
       Enum.reduce(last_images, %{}, fn {player, image}, acc ->
@@ -272,7 +274,8 @@ defmodule Paires.GameServer do
       |> Enum.into(%{})
     round_score =
       Enum.map(state.players, fn {player, _} ->
-        score = score_per_last_image[last_images[player]] + Enum.reduce(state.pairs[player], 0, fn pair, acc ->
+        score = if last_images[player], do: score_per_last_image[last_images[player]], else: 0
+        score = score + Enum.reduce(state.pairs[player] || %{}, 0, fn pair, acc ->
           acc + Map.get(score_per_pair, pair, 0)
         end)
         {player, score}
