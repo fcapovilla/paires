@@ -14,21 +14,28 @@
 
     <%= if @game.state == :choose_pairs do %>
       <h1>Choix des paires</h1>
-      <p>Faites des paires avec les images ci-dessous :</p>
-      <% paired = Enum.flat_map((@game.pairs[@current_user] || %{}), &(Tuple.to_list(&1))) %>
-      <%= for {image, id} <- Enum.with_index(@game.images) do %>
-        <% id = Integer.to_string(id) %>
-        <%= if id not in paired do %>
-          <img phx-click="select_image" phx-value-id="<%= id %>" src="<%= image %>" class="<%= if @selection == id, do: "selected", else: "" %>"/>
-        <% end %>
-      <% end %>
-      <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
-        <div>
-          <img src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
-          <img src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
-          <button phx-click="delete_pair" phx-value-id="<%= image1 %>">Supprimer</button>
+      <div class="row">
+        <div class="column column-75">
+          <p>Faites des paires avec les images ci-dessous :</p>
+          <% paired = Enum.flat_map((@game.pairs[@current_user] || %{}), &(Tuple.to_list(&1))) %>
+          <%= for {image, id} <- Enum.with_index(@game.images) do %>
+            <% id = Integer.to_string(id) %>
+            <%= if id not in paired do %>
+              <img phx-click="select_image" phx-value-id="<%= id %>" src="<%= image %>" class="selectable <%= if @selection == id, do: "selected", else: "" %>"/>
+            <% end %>
+          <% end %>
         </div>
-      <% end %>
+          <div class="column column-25">
+            <h2>Vos paires</h2>
+            <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
+            <div>
+                <img width="75px" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+                <img width="75px" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
+                <button phx-click="delete_pair" phx-value-id="<%= image1 %>">Supprimer</button>
+            </div>
+            <% end %>
+          </div>
+      </div>
     <% end %>
   </div>
   <div class="column column-25">
