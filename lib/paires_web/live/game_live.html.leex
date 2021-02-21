@@ -26,33 +26,33 @@
           <% end %>
           <%= if Enum.count(paired) == 10 do %>
             <div>
-              <p>L'image restante sera votre "Image unique".</p>
+              <p>L'image restante est votre "Image unique".</p>
               <button phx-click="ready_vote">Je suis prêt 👍</button>
             </div>
           <% end %>
         </div>
-          <div class="column column-25">
-            <table>
-              <thead>
+        <div class="column column-25">
+          <table>
+            <thead>
+              <tr>
+                  <th colspan="2">Vos paires</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
                 <tr>
-                    <th colspan="2">Vos paires</th>
+                  <td>
+                    <img width="50px" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+                    <img width="50px" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
+                  </td>
+                  <td>
+                    <button class="button button-small button-danger" phx-click="delete_pair" phx-value-id="<%= image1 %>">×️</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
-                  <tr>
-                    <td>
-                      <img width="45%" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
-                      <img width="45%" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
-                    </td>
-                    <td>
-                      <button class="button button-small button-danger" phx-click="delete_pair" phx-value-id="<%= image1 %>">×️</button>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
       </div>
     <% end %>
 
@@ -71,8 +71,8 @@
         <%= for {{image1, image2}, players} <- @game.players_per_pair do %>
         <tr>
           <td>
-            <img src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
-            <img src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
+            <img width="100px" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+            <img width="100px" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
           </td>
           <td>
             <ul>
@@ -101,7 +101,7 @@
           <%= for {image, players} <- @game.players_per_last_image do %>
             <tr>
               <td>
-                <img src="<%= Enum.at(@game.images, String.to_integer(image)) %>"/>
+                <img width="100px" src="<%= Enum.at(@game.images, String.to_integer(image)) %>"/>
               </td>
               <td>
                 <ul>
@@ -169,19 +169,15 @@
   </div>
     <div class="column column-25">
     <h2>Round</h2>
-    <div>
-        <%= @game.round %>
-    </div>
+    <p><%= @game.round %> / 4</p>
     <h2>Timer</h2>
-    <div>
-      <%= @game.timer %>
-    </div>
+    <p><%= @game.timer %></p>
     <h2>Joueurs</h2>
     <ul>
       <%= for {id, user} <- @game.players do %>
         <li>
           <%= user.name %>
-          (<%= @game.score[@current_user] || 0 %>)
+          (<%= @game.score[id] || 0 %>)
           <%= if id == @current_user do %><span title="Moi">👤</span><% end %>
           <%= if @game.state == :choose_pairs && @game.ready_votes[id] do %>
             <span title="Prêt">👍</span>
