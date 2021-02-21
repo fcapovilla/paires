@@ -3,6 +3,9 @@ defmodule Paires.GameServer do
 
   alias Paires.PubSub
 
+  @round_time 90
+  @min_players 3
+
   # Client Code
 
   def start_link(room) do
@@ -29,6 +32,14 @@ defmodule Paires.GameServer do
     GenServer.call(get_pid(room), {:delete_pair, player, image})
   end
 
+  def ready_vote(room, player) do
+    GenServer.call(get_pid(room), {:ready_vote, player})
+  end
+
+  def new_round_vote(room, player) do
+    GenServer.call(get_pid(room), {:new_round_vote, player})
+  end
+
   def get_state(room) do
     GenServer.call(get_pid(room), {:get_state})
   end
@@ -43,10 +54,18 @@ defmodule Paires.GameServer do
       state: :waiting_for_players,
       players: %{},
       reset_votes: %{},
+      ready_votes: %{},
+      new_round_votes: %{},
       round: 0,
       images: [],
       score: %{},
       pairs: %{},
+      timer: 0,
+      players_per_pair: %{},
+      score_per_pair: %{},
+      players_per_last_image: %{},
+      score_per_last_image: %{},
+      round_score: %{},
     }}
   end
 
@@ -54,21 +73,13 @@ defmodule Paires.GameServer do
   def handle_call({:start_game}, _from, %{state: :choose_pairs} = state), do: {:reply, :ok, state}
   def handle_call({:start_game}, _from, %{round: 4} = state) do
     state = %{state |
-      state: :choose_pairs,
-      round: 1,
-      images: fetch_images(),
-      pairs: %{},
+      round: 0,
+      score: %{},
     }
-    {:reply, :ok, broadcast!(state)}
+    {:reply, :ok, state |> start_round() |> broadcast!()}
   end
   def handle_call({:start_game}, _from, state) do
-    state = %{state |
-      state: :choose_pairs,
-      round: state.round + 1,
-      images: fetch_images(),
-      pairs: %{},
-    }
-    {:reply, :ok, broadcast!(state)}
+    {:reply, :ok, state |> start_round() |> broadcast!()}
   end
 
   @impl true
@@ -97,19 +108,37 @@ defmodule Paires.GameServer do
   end
 
   @impl true
-  def handle_call({:timeout}, _from, %{state: :choose_pairs} = state) do
-    state = %{state |
-      state: :choose_pairs,
-    }
+  def handle_call({:ready_vote, player}, _from, %{state: :choose_pairs, timer: timer} = state) when timer > 0 do
+    ready_votes = Map.put(state.ready_votes, player, true)
+    state =
+      if Enum.count(ready_votes) == Enum.count(state.players) do
+        %{state | timer: 0, ready_votes: %{}}
+      else
+        %{state | ready_votes: ready_votes}
+      end
     {:reply, :ok, broadcast!(state)}
   end
+  def handle_call({:ready_vote, _player}, _from, state), do: {:reply, :ok, state}
+
+  @impl true
+  def handle_call({:new_round_vote, player}, _from, %{state: :score} = state) do
+    new_round_votes = Map.put(state.new_round_votes, player, true)
+    state =
+      if Enum.count(new_round_votes) > Enum.count(state.players) / 2 do
+        start_round(state)
+      else
+        %{state | new_round_votes: new_round_votes}
+      end
+    {:reply, :ok, broadcast!(state)}
+  end
+  def handle_call({:new_round_vote, _player}, _from, state), do: {:reply, :ok, state}
 
   @impl true
   def handle_call({:reset_vote, player}, _from, state) do
     reset_votes = Map.put(state.reset_votes, player, true)
     state =
       if Enum.count(reset_votes) > Enum.count(state.players) / 2 do
-        %{state | state: :ready, reset_votes: %{}}
+        %{state | state: :ready, reset_votes: %{}, timer: 0}
       else
         %{state | reset_votes: reset_votes}
       end
@@ -119,6 +148,18 @@ defmodule Paires.GameServer do
   @impl true
   def handle_call({:get_state}, _from, state) do
     {:reply, get_public_state(state), state}
+  end
+
+  @impl true
+  def handle_info(:tick, state) do
+    state =
+      cond do
+        state.timer > 0 ->
+          Process.send_after(self(), :tick, 1000)
+          %{state | timer: state.timer - 1}
+        true -> end_round(state)
+      end
+    {:noreply, broadcast!(state)}
   end
 
   @impl true
@@ -138,7 +179,7 @@ defmodule Paires.GameServer do
   defp handle_joins(state, players) do
     joins = Enum.map(players, fn {id, %{metas: [meta|_]}} -> {id, meta} end) |> Map.new()
     players = Map.merge(state.players, joins)
-    if Enum.count(players) >= 1 do
+    if Enum.count(players) >= @min_players do
       if state.state == :waiting_for_players do
         %{state | state: :ready, players: players}
       else
@@ -153,7 +194,7 @@ defmodule Paires.GameServer do
     leaves = Enum.map(players, fn {id, %{metas: [meta|_]}} -> {id, meta} end) |> Map.new()
     players = Map.drop(state.players, Map.keys(leaves))
     case Enum.count(players) do
-      x when x < 1 ->
+      x when x < @min_players ->
         %{state | state: :waiting_for_players, players: players}
       _ ->
         %{state | players: players}
@@ -186,6 +227,91 @@ defmodule Paires.GameServer do
       {:ok, response} = Paires.HttpClient.get("https://source.unsplash.com/180x180/?#{theme}")
       response.headers |> Enum.into(%{}) |> Map.get("location")
     end)
+  end
+
+  def end_round(state) do
+    nb_players = Enum.count(state.players)
+    players_per_pair =
+      Enum.reduce(state.pairs, %{}, fn {player, pairs}, acc ->
+        Enum.reduce(pairs, acc, fn pair, acc2 ->
+          Map.put(acc2, pair, Map.get(acc2, pair, []) ++ [player])
+        end)
+      end)
+    score_per_pair =
+      Enum.map(players_per_pair, fn {pair, players} ->
+        score = Enum.count(players)
+        case score do
+          1 -> {pair, 0}
+          ^nb_players -> {pair, 0}
+          _ -> {pair, score}
+        end
+      end)
+      |> Enum.into(%{})
+    last_images =
+      Enum.map(state.pairs, fn {player, pairs} ->
+        {player, Enum.flat_map(pairs, fn {k, v} ->
+          [k, v]
+        end)}
+      end)
+      |> Enum.map(fn {player, images} ->
+           {player, hd(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] -- images)}
+         end)
+      |> Enum.into(%{})
+    players_per_last_image =
+      Enum.reduce(last_images, %{}, fn {player, image}, acc ->
+        Map.put(acc, image, Map.get(acc, image, []) ++ [player])
+      end)
+    score_per_last_image =
+      Enum.map(players_per_last_image, fn {image, players} ->
+        score = Enum.count(players)
+        case score do
+          1 -> {image, 0}
+          _ -> {image, score * 2}
+        end
+      end)
+      |> Enum.into(%{})
+    round_score =
+      Enum.map(state.players, fn {player, _} ->
+        score = score_per_last_image[last_images[player]] + Enum.reduce(state.pairs[player], 0, fn pair, acc ->
+          acc + Map.get(score_per_pair, pair, 0)
+        end)
+        {player, score}
+      end)
+      |> Enum.into(%{})
+    score =
+      Enum.map(state.players, fn {player, _} ->
+        {player, Map.get(state.score, player, 0) + round_score[player]}
+      end)
+      |> Enum.into(%{})
+
+    %{state |
+      state: :score,
+      players_per_pair: players_per_pair,
+      score_per_pair: score_per_pair,
+      players_per_last_image: players_per_last_image,
+      score_per_last_image: score_per_last_image,
+      round_score: round_score,
+      score: score,
+    }
+  end
+
+  defp start_round(state) do
+    Process.send_after(self(), :tick, 1000)
+    %{state |
+      state: :choose_pairs,
+      reset_votes: %{},
+      ready_votes: %{},
+      new_round_votes: %{},
+      round: state.round + 1,
+      images: fetch_images(),
+      pairs: %{},
+      timer: @round_time,
+      players_per_pair: %{},
+      score_per_pair: %{},
+      players_per_last_image: %{},
+      score_per_last_image: %{},
+      round_score: %{},
+    }
   end
 
   defp get_public_state(state) do

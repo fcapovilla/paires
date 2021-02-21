@@ -16,7 +16,7 @@
       <h1>Choix des paires</h1>
       <div class="row">
         <div class="column column-75">
-          <p>Faites des paires avec les images ci-dessous :</p>
+          <p>Faites des paires en cliquant sur les images ci-dessous :</p>
           <% paired = Enum.flat_map((@game.pairs[@current_user] || %{}), &(Tuple.to_list(&1))) %>
           <%= for {image, id} <- Enum.with_index(@game.images) do %>
             <% id = Integer.to_string(id) %>
@@ -24,33 +24,176 @@
               <img phx-click="select_image" phx-value-id="<%= id %>" src="<%= image %>" class="selectable <%= if @selection == id, do: "selected", else: "" %>"/>
             <% end %>
           <% end %>
+          <%= if Enum.count(paired) == 10 do %>
+            <div>
+              <p>L'image restante sera votre "Image unique".</p>
+              <button phx-click="ready_vote">Je suis prêt 👍</button>
+            </div>
+          <% end %>
         </div>
           <div class="column column-25">
-            <h2>Vos paires</h2>
-            <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
-            <div>
-                <img width="75px" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
-                <img width="75px" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
-                <button phx-click="delete_pair" phx-value-id="<%= image1 %>">Supprimer</button>
-            </div>
-            <% end %>
+            <table>
+              <thead>
+                <tr>
+                    <th colspan="2">Vos paires</th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
+                  <tr>
+                    <td>
+                      <img width="45%" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+                      <img width="45%" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
+                    </td>
+                    <td>
+                      <button class="button button-small button-danger" phx-click="delete_pair" phx-value-id="<%= image1 %>">×️</button>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
           </div>
       </div>
     <% end %>
+
+    <%= if @game.state == :score do %>
+      <h1>Score</h1>
+      <h2>Paires</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50%">Paire</th>
+            <th style="width: 25%">Joueurs</th>
+            <th style="width: 25%">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+        <%= for {{image1, image2}, players} <- @game.players_per_pair do %>
+        <tr>
+          <td>
+            <img src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+            <img src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
+          </td>
+          <td>
+            <ul>
+              <%= for player <- players do %>
+                <li><%= if @game.players[player], do: @game.players[player].name, else: "" %></li>
+              <% end %>
+            </ul>
+          </td>
+          <td>
+            <%= @game.score_per_pair[{image1, image2}] %>
+          </td>
+        </tr>
+        <% end %>
+        </tbody>
+      </table>
+      <h2>Images uniques</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50%">Image</th>
+            <th style="width: 25%">Joueurs</th>
+            <th style="width: 25%">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= for {image, players} <- @game.players_per_last_image do %>
+            <tr>
+              <td>
+                <img src="<%= Enum.at(@game.images, String.to_integer(image)) %>"/>
+              </td>
+              <td>
+                <ul>
+                  <%= for player <- players do %>
+                    <li><%= if @game.players[player], do: @game.players[player].name, else: "" %></li>
+                  <% end %>
+                </ul>
+              </td>
+              <td>
+                <%= @game.score_per_last_image[image] %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      <h2>Total</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50%">Joueur</th>
+            <th style="width: 50%">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= for {player, score} <- Enum.sort_by(@game.round_score, fn {_, v} -> v end, :desc) do %>
+            <tr>
+              <td>
+                <%= if @game.players[player], do: @game.players[player].name, else: "" %>
+              </td>
+              <td>
+                <%= score %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <%= if @game.round == 4 do %>
+        <h1>Score final</h1>
+        <table>
+          <thead>
+          <tr>
+            <th style="width: 50%">Joueur</th>
+            <th style="width: 50%">Score</th>
+          </tr>
+          </thead>
+          <tbody>
+          <%= for {player, score} <- Enum.sort_by(@game.score, fn {_, v} -> v end, :desc) do %>
+            <tr>
+              <td>
+                <%= if @game.players[player], do: @game.players[player].name, else: "" %>
+              </td>
+              <td>
+                <%= score %>
+              </td>
+            </tr>
+          <% end %>
+          </tbody>
+        </table>
+        <button phx-click="new_round_vote">Nouvelle partie 👍</button>
+      <% else %>
+        <button phx-click="new_round_vote">Prochain round 👍</button>
+      <% end %>
+    <% end %>
   </div>
-  <div class="column column-25">
-    <h2>Score</h2>
+    <div class="column column-25">
+    <h2>Round</h2>
+    <div>
+        <%= @game.round %>
+    </div>
+    <h2>Timer</h2>
+    <div>
+      <%= @game.timer %>
+    </div>
     <h2>Joueurs</h2>
     <ul>
       <%= for {id, user} <- @game.players do %>
         <li>
           <%= user.name %>
+          (<%= @game.score[@current_user] || 0 %>)
           <%= if id == @current_user do %><span title="Moi">👤</span><% end %>
+          <%= if @game.state == :choose_pairs && @game.ready_votes[id] do %>
+            <span title="Prêt">👍</span>
+          <% end %>
+          <%= if @game.state == :score && @game.new_round_votes[id] do %>
+            <span title="Prêt">👍</span>
+          <% end %>
         </li>
       <% end %>
     </ul>
     <%= if @game.state != :waiting_for_players and @game.state != :ready do %>
-      <button phx-click="reset_vote" class="btn-danger">Annuler</button>
+      <button phx-click="reset_vote" class="button-danger">Annuler</button>
       <%= if @game.reset_votes != %{} do %>
         <p><small>Votes: <%= Enum.count(@game.reset_votes) %>/<%= Enum.count(@game.players) %></small></p>
       <% end %>

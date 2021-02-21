@@ -91,11 +91,6 @@
 }
 
 /* Other styles */
-button.btn-danger, input.btn-danger {
-  background-color: #a94442;
-  border-color: #f2dede;
-}
-
 .hidden {
   display: none;
 }
@@ -111,4 +106,15 @@ img.selectable {
 }
 img.selectable.selected {
   border: 3px solid blue;
+}
+
+.button-small {
+  height: 2.8rem;
+  line-height: 2.8rem;
+  padding: 0 1.5rem;
+}
+
+button.button-danger, input.button-danger {
+  background-color: #a94442;
+  border-color: #f2dede;
 }
