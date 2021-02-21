@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="column">
+    <center>
+      <h1>Paires</h1>
+      <p>Un clône du jeu "Qui Paire Gagne".</p>
+      <p>
+        Veuillez entrer votre nom et le nom d'une salle de jeu pour vous joindre à la partie.
+      </p>
+    </center>
+  </div>
+</div>
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <form action="/" method="post" autocomplete="off" enctype="multipart/form-data">
+      <fieldset>
+        <input type="hidden" name="_csrf_token" value="<%= Phoenix.Controller.get_csrf_token() %>">
+        <label for="name">Nom du joueur</label>
+        <input type="text" name="name" maxlength="50" value="<%= @name %>" autofocus/>
+        <label for="name">Nom de la salle</label>
+        <input type="text" name="room" maxlength="50" value="<%= @room %>"/>
+        <input type="submit" value="Entrer"/>
+      </fieldset>
+    </form>
+  </div>
+</div>
+<footer>
+  <center>Frédérick Capovilla, 2021 - <a href="https://github.com/fcapovilla/paires">(Github)</a></center>
+</footer>

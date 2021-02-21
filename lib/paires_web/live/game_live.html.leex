@@ -1,0 +1,52 @@
+<div class="row row-reverse">
+  <div class="column column-75">
+    <%= if @game.state == :waiting_for_players do %>
+      <h1>Salle d'attente</h1>
+      <p>Il faut au moins 3 joueurs pour commencer la partie.</p>
+      <p>En attente de plus de joueurs...</p>
+    <% end %>
+
+    <%= if @game.state == :ready do %>
+      <h1>Salle d'attente</h1>
+      <p>Vous pouvez maintenant démarrer une partie à <%= Enum.count(@game.players) %> joueurs.</p>
+      <button phx-click="start_game">Démarrer</button>
+    <% end %>
+
+    <%= if @game.state == :choose_pairs do %>
+      <h1>Choix des paires</h1>
+      <p>Faites des paires avec les images ci-dessous :</p>
+      <% paired = Enum.flat_map((@game.pairs[@current_user] || %{}), &(Tuple.to_list(&1))) %>
+      <%= for {image, id} <- Enum.with_index(@game.images) do %>
+        <% id = Integer.to_string(id) %>
+        <%= if id not in paired do %>
+          <img phx-click="select_image" phx-value-id="<%= id %>" src="<%= image %>" class="<%= if @selection == id, do: "selected", else: "" %>"/>
+        <% end %>
+      <% end %>
+      <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
+        <div>
+          <img src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+          <img src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
+          <button phx-click="delete_pair" phx-value-id="<%= image1 %>">Supprimer</button>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+  <div class="column column-25">
+    <h2>Score</h2>
+    <h2>Joueurs</h2>
+    <ul>
+      <%= for {id, user} <- @game.players do %>
+        <li>
+          <%= user.name %>
+          <%= if id == @current_user do %><span title="Moi">👤</span><% end %>
+        </li>
+      <% end %>
+    </ul>
+    <%= if @game.state != :waiting_for_players and @game.state != :ready do %>
+      <button phx-click="reset_vote" class="btn-danger">Annuler</button>
+      <%= if @game.reset_votes != %{} do %>
+        <p><small>Votes: <%= Enum.count(@game.reset_votes) %>/<%= Enum.count(@game.players) %></small></p>
+      <% end %>
+    <% end %>
+  </div>
+</div>
