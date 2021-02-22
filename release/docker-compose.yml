@@ -1,0 +1,11 @@
+version: "2"
+services:
+  paires:
+    image: docker.pkg.github.com/fcapovilla/paires/paires:latest
+    environment:
+      MIX_ENV: prod
+      HOST: localhost
+      PORT: 4000
+      SECRET_KEY_BASE: CHANGE_ME
+    ports:
+      - "4000:4000"
