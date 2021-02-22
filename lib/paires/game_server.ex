@@ -96,6 +96,7 @@ defmodule Paires.GameServer do
     }
     {:reply, :ok, broadcast!(state)}
   end
+  def handle_call({:set_pair, _player, _images}, _from, state), do: {:reply, :ok, state}
 
   @impl true
   def handle_call({:delete_pair, player, image}, _from, %{state: :choose_pairs} = state) do
@@ -113,6 +114,7 @@ defmodule Paires.GameServer do
     }
     {:reply, :ok, broadcast!(state)}
   end
+  def handle_call({:delete_pair, _player, _image}, _from, state), do: {:reply, :ok, state}
 
   @impl true
   def handle_call({:ready_vote, player}, _from, %{state: :choose_pairs, timer: timer} = state) when timer > 0 do
@@ -145,7 +147,7 @@ defmodule Paires.GameServer do
     reset_votes = Map.put(state.reset_votes, player, true)
     state =
       if Enum.count(reset_votes) > Enum.count(state.players) / 2 do
-        %{state | state: :ready, reset_votes: %{}, timer: 0}
+        %{state | state: :ready, reset_votes: %{}, timer: 0, round: 0, score: %{}}
       else
         %{state | reset_votes: reset_votes}
       end
@@ -158,7 +160,7 @@ defmodule Paires.GameServer do
   end
 
   @impl true
-  def handle_info(:tick, state) do
+  def handle_info(:tick, %{state: :choose_pairs} = state) do
     state =
       cond do
         state.timer > 0 ->
@@ -168,6 +170,7 @@ defmodule Paires.GameServer do
       end
     {:noreply, broadcast!(state)}
   end
+  def handle_info(:tick, state), do: {:noreply, state}
 
   @impl true
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff", payload: diff}, state) do

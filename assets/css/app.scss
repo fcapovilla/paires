@@ -103,6 +103,7 @@
 
 img.selectable {
   border: 3px solid white;
+  cursor: pointer;
 }
 img.selectable.selected {
   border: 3px solid blue;
