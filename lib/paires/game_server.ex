@@ -205,7 +205,7 @@ defmodule Paires.GameServer do
     players = Map.drop(state.players, Map.keys(leaves))
     case Enum.count(players) do
       x when x < @min_players ->
-        %{state | state: :waiting_for_players, players: players}
+        %{state | state: :waiting_for_players, players: players, reset_votes: %{}, timer: 0, round: 0, score: %{}}
       _ ->
         %{state | players: players}
     end
