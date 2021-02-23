@@ -3,7 +3,7 @@ defmodule Paires.GameServer do
 
   alias Paires.PubSub
 
-  @round_time 10
+  @round_time 90
   @min_players 3
 
   # Client Code
