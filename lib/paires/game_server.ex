@@ -3,7 +3,7 @@ defmodule Paires.GameServer do
 
   alias Paires.PubSub
 
-  @round_time 90
+  @round_time 10
   @min_players 3
 
   # Client Code
@@ -71,13 +71,6 @@ defmodule Paires.GameServer do
 
   @impl true
   def handle_call({:start_game}, _from, %{state: :choose_pairs} = state), do: {:reply, :ok, state}
-  def handle_call({:start_game}, _from, %{round: 4} = state) do
-    state = %{state |
-      round: 0,
-      score: %{},
-    }
-    {:reply, :ok, state |> start_round() |> broadcast!()}
-  end
   def handle_call({:start_game}, _from, state) do
     {:reply, :ok, state |> start_round() |> broadcast!()}
   end
@@ -308,6 +301,7 @@ defmodule Paires.GameServer do
     }
   end
 
+  defp start_round(%{round: 4} = state), do: start_round(%{state | round: 0, score: %{}})
   defp start_round(state) do
     Process.send_after(self(), :tick, 1000)
     %{state |
