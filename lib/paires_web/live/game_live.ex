@@ -64,6 +64,12 @@ defmodule PairesWeb.GameLive do
   end
 
   @impl true
+  def handle_event("next_score_vote", _value, socket) do
+    Paires.GameServer.next_score_vote(socket.assigns.game.room, socket.assigns.current_user)
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("new_round_vote", _value, socket) do
     Paires.GameServer.new_round_vote(socket.assigns.game.room, socket.assigns.current_user)
     {:noreply, socket}

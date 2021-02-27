@@ -36,6 +36,10 @@ defmodule Paires.GameServer do
     GenServer.call(get_pid(room), {:ready_vote, player})
   end
 
+  def next_score_vote(room, player) do
+    GenServer.call(get_pid(room), {:next_score_vote, player})
+  end
+
   def new_round_vote(room, player) do
     GenServer.call(get_pid(room), {:new_round_vote, player})
   end
@@ -53,18 +57,18 @@ defmodule Paires.GameServer do
       room: room,
       state: :waiting_for_players,
       players: %{},
+      player_order: [],
       reset_votes: %{},
       ready_votes: %{},
       new_round_votes: %{},
+      next_score_votes: %{},
       round: 0,
       images: [],
       score: %{},
       pairs: %{},
       timer: 0,
-      players_per_pair: %{},
-      score_per_pair: %{},
-      players_per_last_image: %{},
-      score_per_last_image: %{},
+      pair_scores: %{},
+      last_image_scores: %{},
       round_score: %{},
     }}
   end
@@ -121,6 +125,19 @@ defmodule Paires.GameServer do
     {:reply, :ok, broadcast!(state)}
   end
   def handle_call({:ready_vote, _player}, _from, state), do: {:reply, :ok, state}
+
+  @impl true
+  def handle_call({:next_score_vote, player}, _from, %{state: :score} = state) do
+    next_score_votes = Map.put(state.next_score_votes, player, true)
+    state =
+      if Enum.count(next_score_votes) > Enum.count(state.players) / 2 do
+        %{state | pair_scores: Enum.drop(state.pair_scores, 1), next_score_votes: %{}}
+      else
+        %{state | next_score_votes: next_score_votes}
+      end
+    {:reply, :ok, broadcast!(state)}
+  end
+  def handle_call({:next_score_vote, _player}, _from, state), do: {:reply, :ok, state}
 
   @impl true
   def handle_call({:new_round_vote, player}, _from, %{state: :score} = state) do
@@ -182,14 +199,15 @@ defmodule Paires.GameServer do
   defp handle_joins(state, players) do
     joins = Enum.map(players, fn {id, %{metas: [meta|_]}} -> {id, meta} end) |> Map.new()
     players = Map.merge(state.players, joins)
+    player_order = Enum.uniq(state.player_order ++ Map.keys(joins))
     if Enum.count(players) >= @min_players do
       if state.state == :waiting_for_players do
-        %{state | state: :ready, players: players}
+        %{state | state: :ready, players: players, player_order: player_order}
       else
-        %{state | players: players}
+        %{state | players: players, player_order: player_order}
       end
     else
-      %{state | state: :waiting_for_players, players: players}
+      %{state | state: :waiting_for_players, players: players, player_order: player_order}
     end
   end
 
@@ -250,6 +268,21 @@ defmodule Paires.GameServer do
         end
       end)
       |> Enum.into(%{})
+    pair_scores =
+      Enum.map_reduce(state.player_order, [], fn (player, acc) ->
+        pairs = Enum.to_list(state.pairs[player] || %{}) -- acc
+        score = Enum.map(pairs, fn pair ->
+          %{
+            pair: pair,
+            players: players_per_pair[pair],
+            score: score_per_pair[pair]
+          }
+        end)
+        {{player, score}, acc ++ pairs}
+      end)
+      |> elem(0)
+      |> Enum.filter(fn {_, score} -> score != [] end)
+
     last_images =
       Enum.map(state.pairs, fn {player, pairs} ->
         {player, Enum.flat_map(pairs, fn {k, v} ->
@@ -275,6 +308,11 @@ defmodule Paires.GameServer do
         end
       end)
       |> Enum.into(%{})
+    last_image_scores =
+      Enum.map(players_per_last_image, fn {image, players} ->
+        %{image: image, players: players, score: score_per_last_image[image]}
+      end)
+
     round_score =
       Enum.map(state.players, fn {player, _} ->
         score = if last_images[player], do: score_per_last_image[last_images[player]], else: 0
@@ -292,10 +330,9 @@ defmodule Paires.GameServer do
 
     %{state |
       state: :score,
-      players_per_pair: players_per_pair,
-      score_per_pair: score_per_pair,
-      players_per_last_image: players_per_last_image,
-      score_per_last_image: score_per_last_image,
+      pair_scores: pair_scores,
+      last_image_scores: last_image_scores,
+      next_score_votes: %{},
       round_score: round_score,
       score: score,
     }
@@ -304,25 +341,42 @@ defmodule Paires.GameServer do
   defp start_round(%{round: 4} = state), do: start_round(%{state | round: 0, score: %{}})
   defp start_round(state) do
     Process.send_after(self(), :tick, 1000)
+    {_, player_order} = get_next_player(state.players, state.player_order)
     %{state |
       state: :choose_pairs,
+      player_order: player_order,
       reset_votes: %{},
       ready_votes: %{},
       new_round_votes: %{},
+      next_score_votes: %{},
       round: state.round + 1,
       images: fetch_images(),
       pairs: %{},
       timer: @round_time,
-      players_per_pair: %{},
-      score_per_pair: %{},
-      players_per_last_image: %{},
-      score_per_last_image: %{},
+      pair_scores: %{},
+      last_image_scores: %{},
       round_score: %{},
     }
   end
 
+  defp get_next_player(players, player_order, limit \\ 20)
+  defp get_next_player(players, _player_order, 0) do
+    # Could not find a player in time. Reset player order.
+    player_order = Map.keys(players)
+    {List.last(player_order), player_order}
+  end
+  defp get_next_player(players, player_order, limit) do
+    player = List.first(player_order)
+    player_order = List.insert_at(List.delete_at(player_order, 0), -1, player)
+    if players[player] do
+      {player, player_order}
+    else
+      get_next_player(players, player_order, limit - 1)
+    end
+  end
+
   defp get_public_state(state) do
-    Map.drop(state, [])
+    Map.drop(state, [:player_order])
   end
 
   defp broadcast!(state) do
