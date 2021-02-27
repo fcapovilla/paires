@@ -17,7 +17,7 @@ defmodule Paires.GameServer do
   end
 
   def start_game(room) do
-    GenServer.call(get_pid(room), {:start_game})
+    GenServer.call(get_pid(room), {:start_game}, 30_000)
   end
 
   def reset_vote(room, player) do
@@ -41,7 +41,7 @@ defmodule Paires.GameServer do
   end
 
   def new_round_vote(room, player) do
-    GenServer.call(get_pid(room), {:new_round_vote, player})
+    GenServer.call(get_pid(room), {:new_round_vote, player}, 30_000)
   end
 
   def get_state(room) do
@@ -222,32 +222,36 @@ defmodule Paires.GameServer do
     end
   end
 
-  defp fetch_images() do
+  defp fetch_images(tries \\ 3) when tries > 0 do
     themes = [
-      "nature",
-      "animal",
-      "object",
-      "building",
-      "toy",
-      "technology",
-      "cartoon",
-      "people",
-      "business",
-      "food",
-      "drink",
-      "fashion",
-      "health",
-      "interior",
-      "travel",
-      "texture",
-      "sport",
-      "art",
-      "history",
+      "nature", "animal", "object", "building", "toy", "technology", "cartoon", "people", "business", "culinary",
+      "music", "drink", "fashion", "health", "interior", "travel", "texture", "sport", "art", "history"
     ]
-    Enum.map(Enum.take_random(themes, 11), fn(theme) ->
-      {:ok, response} = Paires.HttpClient.get("https://source.unsplash.com/180x180/?#{theme}")
+
+    images =
+      Enum.take_random(themes, 15)
+      |> Task.async_stream(&fetch_image/1, max_concurrency: 5, timeout: 30_000)
+      |> Enum.to_list()
+      |> Enum.map(fn {_, value} -> value end)
+      |> Enum.uniq()
+      |> Enum.take(11)
+
+    if Enum.count(images) != 11 do
+      fetch_images(tries - 1)
+    else
+      images
+    end
+  end
+
+  defp fetch_image(theme) do
+    {:ok, response} = Paires.HttpClient.get("https://source.unsplash.com/random/400x400/?#{theme}")
+    url = response.headers |> Enum.into(%{}) |> Map.get("location")
+    if url =~ ~r/source-404/ do
+      {:ok, response} = Paires.HttpClient.get("https://source.unsplash.com/random/400x400/")
       response.headers |> Enum.into(%{}) |> Map.get("location")
-    end)
+    else
+      url
+    end
   end
 
   def end_round(state) do
