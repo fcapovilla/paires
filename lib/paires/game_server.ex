@@ -131,7 +131,17 @@ defmodule Paires.GameServer do
     next_score_votes = Map.put(state.next_score_votes, player, true)
     state =
       if Enum.count(next_score_votes) > Enum.count(state.players) / 2 do
-        %{state | pair_scores: Enum.drop(state.pair_scores, 1), next_score_votes: %{}}
+        pair_scores = Enum.drop(state.pair_scores, 1)
+        if Enum.count(pair_scores) > 0 do
+          %{state | pair_scores: pair_scores, next_score_votes: %{}}
+        else
+          score =
+            Enum.map(state.player_order, fn player ->
+              {player, Map.get(state.score, player, 0) + (state.round_score[player] || 0)}
+            end)
+            |> Enum.into(%{})
+          %{state | pair_scores: pair_scores, next_score_votes: %{}, score: score}
+        end
       else
         %{state | next_score_votes: next_score_votes}
       end
@@ -326,11 +336,6 @@ defmodule Paires.GameServer do
         {player, score}
       end)
       |> Enum.into(%{})
-    score =
-      Enum.map(state.players, fn {player, _} ->
-        {player, Map.get(state.score, player, 0) + round_score[player]}
-      end)
-      |> Enum.into(%{})
 
     %{state |
       state: :score,
@@ -338,14 +343,13 @@ defmodule Paires.GameServer do
       last_image_scores: last_image_scores,
       next_score_votes: %{},
       round_score: round_score,
-      score: score,
     }
   end
 
   defp start_round(%{round: 4} = state), do: start_round(%{state | round: 0, score: %{}})
   defp start_round(state) do
-    Process.send_after(self(), :tick, 1000)
     {_, player_order} = get_next_player(state.players, state.player_order)
+    Process.send_after(self(), :tick, 1000)
     %{state |
       state: :choose_pairs,
       player_order: player_order,
