@@ -232,10 +232,10 @@ defmodule Paires.GameServer do
     end
   end
 
-  defp fetch_images(tries \\ 3) when tries > 0 do
+  defp fetch_images(tries \\ 5) when tries > 0 do
     themes = [
       "nature", "animal", "object", "building", "toy", "technology", "cartoon", "people", "business", "culinary",
-      "music", "drink", "fashion", "health", "interior", "travel", "texture", "sport", "art", "history"
+      "music", "drink", "fashion", "health", "interior", "travel", "sport", "art", "history"
     ]
 
     images =
@@ -277,7 +277,6 @@ defmodule Paires.GameServer do
         score = Enum.count(players)
         case score do
           1 -> {pair, 0}
-          ^nb_players -> {pair, 0}
           _ -> {pair, score}
         end
       end)
