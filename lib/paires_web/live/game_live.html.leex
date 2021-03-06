@@ -57,57 +57,26 @@
     <% end %>
 
     <%= if @game.state == :score do %>
-      <%= if Enum.count(@game.pair_scores) > 0 do %>
-        <% {player, pairs} = List.first(@game.pair_scores) %>
-        <h1>Score</h1>
-        <h2>Paires de <%= if @game.players[player], do: @game.players[player].name, else: "" %></h2>
-        <p>Expliquez pourquoi vous avez associé chaque images.</p>
-        <table>
-          <thead>
-          <tr>
-            <th style="width: 50%">Paire</th>
-            <th style="width: 25%">Joueurs</th>
-            <th style="width: 25%">Score</th>
-          </tr>
-          </thead>
-          <tbody>
-          <%= for %{pair: {image1, image2}, players: players, score: score} <- pairs do %>
+      <div phx-hook="ScrollUp" id="score-container">
+        <%= if Enum.count(@game.pair_scores) > 0 do %>
+          <% {player, pairs} = List.first(@game.pair_scores) %>
+          <h1>Score</h1>
+          <h2>Paires de <%= if @game.players[player], do: @game.players[player].name, else: "" %></h2>
+          <p>Expliquez pourquoi vous avez associé chaque images.</p>
+          <table>
+            <thead>
             <tr>
-              <td>
-                <img class="score-image" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
-                <img class="score-image" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
-              </td>
-              <td>
-                <ul>
-                  <%= for player <- players do %>
-                    <li><%= if @game.players[player], do: @game.players[player].name, else: "" %></li>
-                  <% end %>
-                </ul>
-              </td>
-              <td>
-                <%= score %>
-              </td>
-            </tr>
-          <% end %>
-          </tbody>
-        </table>
-        <button phx-click="next_score_vote">Joueur suivant 👍</button>
-      <% else %>
-        <h1>Score</h1>
-        <h2>Images uniques</h2>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 50%">Image</th>
+              <th style="width: 50%">Paire</th>
               <th style="width: 25%">Joueurs</th>
               <th style="width: 25%">Score</th>
             </tr>
-          </thead>
-          <tbody>
-            <%= for %{image: image, players: players, score: score} <- @game.last_image_scores do %>
+            </thead>
+            <tbody>
+            <%= for %{pair: {image1, image2}, players: players, score: score} <- pairs do %>
               <tr>
                 <td>
-                  <img class="score-image" src="<%= Enum.at(@game.images, String.to_integer(image)) %>"/>
+                  <img class="score-image" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
+                  <img class="score-image" src="<%= Enum.at(@game.images, String.to_integer(image2)) %>"/>
                 </td>
                 <td>
                   <ul>
@@ -121,57 +90,90 @@
                 </td>
               </tr>
             <% end %>
-          </tbody>
-        </table>
-        <h2>Total</h2>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 50%">Joueur</th>
-              <th style="width: 50%">Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <%= for {player, score} <- Enum.sort_by(@game.round_score, fn {_, v} -> v end, :desc) do %>
-              <tr>
-                <td>
-                  <%= if @game.players[player], do: @game.players[player].name, else: "" %>
-                </td>
-                <td>
-                  <%= score %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-
-        <%= if @game.round == 4 do %>
-          <h1>Score final</h1>
-          <table>
-            <thead>
-            <tr>
-              <th style="width: 50%">Joueur</th>
-              <th style="width: 50%">Score</th>
-            </tr>
-            </thead>
-            <tbody>
-            <%= for {player, score} <- Enum.sort_by(@game.score, fn {_, v} -> v end, :desc) do %>
-              <tr>
-                <td>
-                  <%= if @game.players[player], do: @game.players[player].name, else: "" %>
-                </td>
-                <td>
-                  <%= score %>
-                </td>
-              </tr>
-            <% end %>
             </tbody>
           </table>
-          <button phx-click="new_round_vote">Nouvelle partie 👍</button>
+          <button phx-click="next_score_vote">Joueur suivant 👍</button>
         <% else %>
-          <button phx-click="new_round_vote">Prochain round 👍</button>
+          <h1>Score</h1>
+          <h2>Images uniques</h2>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50%">Image</th>
+                <th style="width: 25%">Joueurs</th>
+                <th style="width: 25%">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for %{image: image, players: players, score: score} <- @game.last_image_scores do %>
+                <tr>
+                  <td>
+                    <img class="score-image" src="<%= Enum.at(@game.images, String.to_integer(image)) %>"/>
+                  </td>
+                  <td>
+                    <ul>
+                      <%= for player <- players do %>
+                        <li><%= if @game.players[player], do: @game.players[player].name, else: "" %></li>
+                      <% end %>
+                    </ul>
+                  </td>
+                  <td>
+                    <%= score %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+          <h2>Total</h2>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50%">Joueur</th>
+                <th style="width: 50%">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for {player, score} <- Enum.sort_by(@game.round_score, fn {_, v} -> v end, :desc) do %>
+                <tr>
+                  <td>
+                    <%= if @game.players[player], do: @game.players[player].name, else: "" %>
+                  </td>
+                  <td>
+                    <%= score %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+
+          <%= if @game.round == 4 do %>
+            <h1>Score final</h1>
+            <table>
+              <thead>
+              <tr>
+                <th style="width: 50%">Joueur</th>
+                <th style="width: 50%">Score</th>
+              </tr>
+              </thead>
+              <tbody>
+              <%= for {player, score} <- Enum.sort_by(@game.score, fn {_, v} -> v end, :desc) do %>
+                <tr>
+                  <td>
+                    <%= if @game.players[player], do: @game.players[player].name, else: "" %>
+                  </td>
+                  <td>
+                    <%= score %>
+                  </td>
+                </tr>
+              <% end %>
+              </tbody>
+            </table>
+            <button phx-click="new_round_vote">Nouvelle partie 👍</button>
+          <% else %>
+            <button phx-click="new_round_vote">Prochain round 👍</button>
+          <% end %>
         <% end %>
-      <% end %>
+      </div>
     <% end %>
   </div>
   <div class="column column-20">
