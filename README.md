@@ -1,19 +1,25 @@
 # Paires
 
-To start your Phoenix server:
+Un clône du jeu "Qui Paire Gagne" avec des images aléatoires obtenues via l'API Unsplash.
 
-  * Install dependencies with `mix deps.get`
-  * Install Node.js dependencies with `npm install` inside the `assets` directory
-  * Start Phoenix endpoint with `mix phx.server`
+## Démarrage
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+Pour démarrer le serveur :
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+* Installer les dépendances avec `mix deps.get`
+* Installer les dépendances Node.js avec `npm install` dans le dossier `assets`
+* Démarrer le serveur avec `mix phx.server`
 
-## Learn more
+Vous pouvez ensuite visiter [`localhost:4000`](http://localhost:4000) dans votre navigateur.
 
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+## Fonctionnement.
+
+Pour démarrer une partie ou joindre une partie existante, il suffit d'entrer un nom de joueur et un nom de salle.
+
+Si la salle n'existe pas, elle sera créée automatiquement. La salle est détruite et son score est réinitialisé dès qu'il n'y a plus aucun joueur dedans.
+
+Des joueurs peuvent se joindre ou quitter une partie à tout moment, mais la partie est annulée si la salle contient moins de 3 joueurs.
+
+Pour annuler une partie en cours, une majorité de joueurs doivent voter pour annuler la partie avec le bouton "Annuler". Cela a pour effet de redémarrer la partie.
+
+À plusieurs moments durant la partie, les joueurs doivent voter pour passer à la prochaine étape. Le vote est terminé dès qu'une majorité des joueurs ont voté.
