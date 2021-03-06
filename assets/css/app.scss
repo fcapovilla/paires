@@ -90,6 +90,30 @@
   margin: -1rem 0 2rem;
 }
 
+/* Image sizes */
+
+.game-image {
+    width: 180px;
+}
+
+.pair-image {
+    width: 70px;
+}
+
+.score-image {
+    width: 180px;
+}
+
+@media (min-width: 80.0rem) {
+    .game-image {
+        width: 225px;
+    }
+
+    .score-image {
+        width: 180px;
+    }
+}
+
 /* Other styles */
 .hidden {
   display: none;
