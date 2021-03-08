@@ -12,6 +12,14 @@ Pour démarrer le serveur :
 
 Vous pouvez ensuite visiter [`localhost:4000`](http://localhost:4000) dans votre navigateur.
 
+## Docker
+
+Pour démarrer le serveur dans Docker, aller dans le dossier `release` et modifier le fichier `docker-compose.yml` pour y entrer vos variables d'environnement.
+
+La variable `SECRET_KEY` doit contenir une clé générée avec la commande `mix phx.gen.secret`.
+
+Une fois le fichier modifié, démarrer le serveur avec la commande `docker-compose up`.
+
 ## Fonctionnement.
 
 Pour démarrer une partie ou joindre une partie existante, il suffit d'entrer un nom de joueur et un nom de salle.
