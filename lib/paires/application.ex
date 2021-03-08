@@ -15,7 +15,7 @@ defmodule Paires.Application do
       # Start the Endpoint (http/https)
       PairesWeb.Endpoint,
       {Registry, keys: :unique, name: Paires.RoomRegistry},
-      Paires.GameSupervisor,
+      Paires.GameSupervisor
       # Start a worker by calling: Paires.Worker.start_link(arg)
       # {Paires.Worker, arg}
     ]

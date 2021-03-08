@@ -5,6 +5,7 @@ defmodule PairesWeb.Presence do
   See the [`Phoenix.Presence`](http://hexdocs.pm/phoenix/Phoenix.Presence.html)
   docs for more details.
   """
-  use Phoenix.Presence, otp_app: :paires,
-                        pubsub_server: Paires.PubSub
+  use Phoenix.Presence,
+    otp_app: :paires,
+    pubsub_server: Paires.PubSub
 end

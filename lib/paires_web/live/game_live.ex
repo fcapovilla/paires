@@ -7,10 +7,12 @@ defmodule PairesWeb.GameLive do
   @impl true
   def mount(%{"room" => room}, %{"name" => name, "player_id" => player_id}, socket) do
     room = room |> String.trim() |> String.slice(0..50)
+
     if connected?(socket) do
-      {:ok, _} = Presence.track(self(), "paires:presence:" <> room, player_id, %{
-        name: name,
-      })
+      {:ok, _} =
+        Presence.track(self(), "paires:presence:" <> room, player_id, %{
+          name: name
+        })
 
       Phoenix.PubSub.subscribe(PubSub, "paires:room:" <> room)
     end
@@ -28,6 +30,7 @@ defmodule PairesWeb.GameLive do
       {:ok, socket |> redirect(to: Routes.login_path(socket, :index, room: room))}
     end
   end
+
   def mount(%{"room" => room}, _session, socket) do
     room = room |> String.trim() |> String.slice(0..50)
     {:ok, socket |> redirect(to: Routes.login_path(socket, :index, room: room))}
@@ -78,18 +81,22 @@ defmodule PairesWeb.GameLive do
   @impl true
   def handle_event("select_image", %{"id" => id}, socket) do
     case socket.assigns.selection do
-      nil -> {:noreply, socket |> assign(:selection, id)}
-      ^id -> {:noreply, socket |> assign(:selection, nil)}
+      nil ->
+        {:noreply, socket |> assign(:selection, id)}
+
+      ^id ->
+        {:noreply, socket |> assign(:selection, nil)}
+
       _ ->
         Paires.GameServer.set_pair(
           socket.assigns.game.room,
           socket.assigns.current_user,
           {socket.assigns.selection, id}
         )
+
         {:noreply, socket |> assign(:selection, nil)}
     end
   end
-
 
   @impl true
   def handle_event("delete_pair", %{"id" => id}, socket) do

@@ -39,7 +39,7 @@
               </tr>
             </thead>
             <tbody>
-              <%= for {image1, image2} <- @game.pairs[@current_user] || %{} do %>
+              <%= for {image1, image2} <- (@game.pairs[@current_user] || %{}) do %>
                 <tr>
                   <td>
                     <img class="pair-image" src="<%= Enum.at(@game.images, String.to_integer(image1)) %>"/>
@@ -133,7 +133,7 @@
               </tr>
             </thead>
             <tbody>
-              <%= for {player, score} <- Enum.sort_by(@game.round_score, fn {_, v} -> v end, :desc) do %>
+              <%= for {player, score} <- Enum.sort_by(@game.round_score, &elem(&1, 1), :desc) do %>
                 <tr>
                   <td>
                     <%= if @game.players[player], do: @game.players[player].name, else: "" %>
@@ -156,7 +156,7 @@
               </tr>
               </thead>
               <tbody>
-              <%= for {player, score} <- Enum.sort_by(@game.score, fn {_, v} -> v end, :desc) do %>
+              <%= for {player, score} <- Enum.sort_by(@game.score, &elem(&1, 1), :desc) do %>
                 <tr>
                   <td>
                     <%= if @game.players[player], do: @game.players[player].name, else: "" %>
