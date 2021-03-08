@@ -17,7 +17,7 @@
       <div class="row">
         <div class="column column-80">
           <p>Faites des paires en cliquant sur les images ci-dessous :</p>
-          <% paired = Enum.flat_map((@game.pairs[@current_user] || %{}), &(Tuple.to_list(&1))) %>
+          <% paired = Enum.flat_map((@game.pairs[@current_user] || %{}), &Tuple.to_list/1) %>
           <%= for {image, id} <- Enum.with_index(@game.images) do %>
             <% id = Integer.to_string(id) %>
             <%= if id not in paired do %>
