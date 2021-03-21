@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "dockerfileLines": [
+    "FROM ghcr.io/fcapovilla/paires:latest",
+    "ENV HOST=localhost",
+    "ENV PORT=80",
+    "ENV MIX_ENV=prod",
+    "ENV SECRET_KEY_BASE=CHANGE_ME",
+    "CMD [\"/app/release/entrypoint.sh\"]"
+  ]
+}
