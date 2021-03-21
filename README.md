@@ -24,7 +24,7 @@ Une fois le fichier modifié, démarrer le serveur avec la commande `docker-comp
 
 * Créer une application vide sur CapRover pour héberger Paires.
 * Regarder les variables d'environnement définies dans le fichier `captain-definition` et les redéfinir dans CapRover si nécessaire. Vous devez configurer les variables `SECRET_KEY_BASE` et `HOST`.
-* Déployer l'application avec la commande `caprover deploy` et sélectionne l'application vide que vous venez de créer.
+* Déployer l'application avec la commande `caprover deploy` et sélectionner l'application vide que vous venez de créer.
 
 ## Fonctionnement.
 
